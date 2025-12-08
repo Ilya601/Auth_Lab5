@@ -1,0 +1,178 @@
+name: Full CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: "18"
+
+jobs:
+  unit-test:
+    name: 🧪 Unit Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: 💾 Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+            .next/cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run unit tests
+        env:
+          NODE_ENV: test
+          JWT_ACCESS_SECRET: "replace-with-secure-random-string"
+          JWT_REFRESH_SECRET: "replace-with-secure-random-string"
+        run: npm run unit
+
+      - name: 💾 Cache test results
+        uses: actions/cache@v4
+        with:
+          path: |
+            coverage
+            .nyc_output
+          key: ${{ runner.os }}-test-results-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-test-results-
+
+  staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [unit-test]
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: 💾 Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+            .next/cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🚀 Start staging server
+        env:
+          NODE_ENV: staging
+          DATABASE_URL: ./staging_auth.db
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+        run: |
+          npm start &
+          echo "Staging server starting..."
+          sleep 10
+
+      - name: 🏗️ Trigger Staging Deployment
+        if: success()
+        run: |
+          curl -X POST ${{ secrets.RENDER_HOOK_DEV }}
+
+  integration-test:
+    name: 🧪 Integration Test
+    runs-on: ubuntu-latest
+    needs: [unit-test, staging]
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: 💾 Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run integration tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: ./integration_test_auth.db
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+        run: npm run integration
+
+  production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [integration-test, unit-test, staging]
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: 💾 Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+            .next/cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🚀 Start production server
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ./prod_auth.db
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        run: |
+          npm start &
+          echo "Production server starting..."
+          sleep 10

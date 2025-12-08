@@ -1,0 +1,381 @@
+{
+  "info": {
+    "name": "JWT IP-Restriction API",
+    "description": "Демонстрация работы JWT токенов с IP-ограничениями",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "testuser",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "password123",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Проверка текущего IP",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/info",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "info"]
+        },
+        "description": "Проверяет ваш текущий IP-адрес, который видит сервер"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Регистрация пользователя",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    pm.collectionVariables.set('username', pm.request.body.raw ? JSON.parse(pm.request.body.raw).username : 'testuser');",
+              "    console.log('✅ Пользователь зарегистрирован');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "register"]
+        },
+        "description": "Регистрация нового пользователя (только username и password)"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Вход (токен для текущего IP)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('accessToken', response.accessToken);",
+              "    pm.collectionVariables.set('refreshToken', response.refreshToken);",
+              "    console.log('✅ Токены сохранены');",
+              "    console.log('IP:', response.ip);",
+              "    console.log('Allowed IPs:', response.allowedIps);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Вход с привязкой токена к текущему IP-адресу"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Вход (токен для нескольких IP)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('accessToken', response.accessToken);",
+              "    pm.collectionVariables.set('refreshToken', response.refreshToken);",
+              "    console.log('✅ Токены с несколькими IP сохранены');",
+              "    console.log('Allowed IPs:', response.allowedIps);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"allowedIps\": [\"127.0.0.1\", \"192.168.1.*\", \"10.0.0.*\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Вход с указанием нескольких разрешенных IP (включая wildcard паттерны)"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Доступ к защищенному маршруту (SUCCESS)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/protected",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "protected"]
+        },
+        "description": "Доступ с правильным токеном и IP - должен работать ✅"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Симуляция запроса с другого IP (FAIL)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          },
+          {
+            "key": "X-Forwarded-For",
+            "value": "203.0.113.1",
+            "description": "Симулируем запрос с другого IP"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/protected",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "protected"]
+        },
+        "description": "Попытка доступа с другого IP - должна быть заблокирована ❌\n\nЗаголовок X-Forwarded-For симулирует запрос с IP 203.0.113.1"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Симуляция запроса с разрешенного wildcard IP (SUCCESS)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}",
+            "description": "Используем токен из запроса #4 с allowedIps"
+          },
+          {
+            "key": "X-Forwarded-For",
+            "value": "192.168.1.100",
+            "description": "IP соответствует паттерну 192.168.1.*"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/protected",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "protected"]
+        },
+        "description": "Доступ с IP, соответствующего wildcard паттерну 192.168.1.* - должен работать ✅\n\nСначала выполните запрос #4 для получения токена с несколькими IP"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Профиль пользователя",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/profile",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "profile"]
+        },
+        "description": "Получить профиль пользователя с информацией об активных сессиях"
+      },
+      "response": []
+    },
+    {
+      "name": "9. Обновление токенов",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    pm.collectionVariables.set('accessToken', response.accessToken);",
+              "    pm.collectionVariables.set('refreshToken', response.refreshToken);",
+              "    console.log('✅ Токены обновлены');",
+              "    console.log('⚠️ Старые токены больше не работают!');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/refresh",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "refresh"]
+        },
+        "description": "Обновление токенов с помощью refresh token.\n\n⚠️ После обновления старые токены автоматически отзываются!"
+      },
+      "response": []
+    },
+    {
+      "name": "10. Попытка использовать старый токен (FAIL)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.OLD_TOKEN_HERE",
+            "description": "Замените на старый токен"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/protected",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "protected"]
+        },
+        "description": "Попытка использовать старый токен после обновления - должна быть заблокирована ❌\n\nСкопируйте старый accessToken перед выполнением запроса #9"
+      },
+      "response": []
+    },
+    {
+      "name": "11. Выход (отзыв всех токенов)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    console.log('✅ Все токены отозваны');",
+              "    console.log('⚠️ Текущие токены больше не работают!');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/logout",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "logout"]
+        },
+        "description": "Выход из системы - отзывает ВСЕ токены пользователя"
+      },
+      "response": []
+    },
+    {
+      "name": "12. Попытка доступа после выхода (FAIL)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/protected",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "protected"]
+        },
+        "description": "Попытка доступа после выхода - должна быть заблокирована ❌"
+      },
+      "response": []
+    },
+    {
+      "name": "13. Публичный маршрут (без токена)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/public",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "public"]
+        },
+        "description": "Публичный маршрут доступен без токена"
+      },
+      "response": []
+    }
+  ]
+}
