@@ -42,7 +42,7 @@ jobs:
           NODE_ENV: test
           JWT_ACCESS_SECRET: "replace-with-secure-random-string"
           JWT_REFRESH_SECRET: "replace-with-secure-random-string"
-        run: npm run unit
+        run: npm run test:unit
 
       - name: 💾 Cache test results
         uses: actions/cache@v4
@@ -133,7 +133,7 @@ jobs:
           DATABASE_URL: ./integration_test_auth.db
           JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-        run: npm run integration
+        run: npm run test:integration
 
   production:
     name: 🚀 Deploy to Production
