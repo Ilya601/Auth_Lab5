@@ -4,7 +4,7 @@ import { verifyPassword } from "../db/userRepository";
 describe("unit", () => {
   it("should verify password", async () => {
     const password = "password";
-    const passwordHash = await verifyPassword(password, "passwordaaaaaaaaaaaaaaaa");
+    const passwordHash = await verifyPassword(password, "password");
     expect(passwordHash).toBeDefined();
   });
 });
