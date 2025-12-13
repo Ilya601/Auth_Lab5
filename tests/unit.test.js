@@ -5,6 +5,6 @@ describe("unit", () => {
   it("should verify password", async () => {
     const password = "password";
     const passwordHash = await verifyPassword(password, "passwordADAddweqwf");
-    expect(passwordHash).toBeDefined();
+    expect(passwordHash).toBeTruthy();
   });
 });
