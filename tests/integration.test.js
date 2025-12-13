@@ -35,7 +35,7 @@ describe("POST /api/auth/register - Регистрация пользовате�
 
     // Выполняем запрос на регистрацию
     const response = await request(server)
-      .post("/api/auth/register")
+      .post("/api/auth/")
       .send(testUser)
       .set("X-Forwarded-For", "192.168.1.100")
       .expect("Content-Type", /json/)
