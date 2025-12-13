@@ -2,6 +2,7 @@ node_modules/
 .env
 *.log
 .DS_Store
+JWT IP-Restriction API
 db/*.db
 db/*.db-shm
 db/*.db-wal
