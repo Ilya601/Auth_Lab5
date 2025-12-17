@@ -6,7 +6,7 @@ describe("unit", () => {
   it("should verify password", async () => {
     const password = "password";
     const hash = bcrypt.hashSync(password, 10);
-    const passwordHash =  verifyPassword(password, hash);
+    const passwordHash =  verifyPassword(password, reg);
     expect(passwordHash).toBeTruthy();
   });
 });

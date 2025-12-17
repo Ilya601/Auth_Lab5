@@ -229,7 +229,7 @@ app.get('/api/profile', authenticateWithIp, async (req, res) => {
 app.get('/api/public', optionalAuth, (req, res) => {
   res.json({
     success: true,
-    message: 'Публичный маршрут11111111',
+    message: 'Публичный маршрут2222222222222222',
     authenticated: !!req.user,
     user: req.user ? {
       username: req.user.username,
