@@ -21,7 +21,7 @@ export async function createTokenPair(userId, username, ipAddress, allowedIps = 
   };
   
   const accessToken = jwt.sign(accessPayload, JWT_SECRET, {
-    expiresIn: '15m' // 15 минут
+    expiresIn: '30s' // 15 минут
   });
   
   // Refresh token (длинный срок жизни)
